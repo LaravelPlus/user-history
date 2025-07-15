@@ -246,9 +246,9 @@ class UserActivityApiController extends Controller
     }
 
     /**
-     * Search activities by query.
+     * Quick search activities by query.
      */
-    public function search(Request $request): JsonResponse
+    public function quickSearch(Request $request): JsonResponse
     {
         $query = $request->get('q');
         

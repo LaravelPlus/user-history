@@ -1,24 +1,26 @@
 <?php
 
+declare(strict_types=1);
+
 namespace LaravelPlus\UserHistory\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use LaravelPlus\UserHistory\Models\UserActivity;
 use Illuminate\Support\Facades\Auth;
+use LaravelPlus\UserHistory\Models\UserActivity;
 use Symfony\Component\HttpFoundation\Response;
 
-class TrackUserActivity
+final class TrackUserActivity
 {
     /**
      * Activity data to be logged.
      */
-    protected $activityData = null;
+    private $activityData = null;
 
     /**
      * Handle an incoming request.
      */
-    public function handle(Request $request, Closure $next, string $action = null, string $description = null): Response
+    public function handle(Request $request, Closure $next, ?string $action = null, ?string $description = null): Response
     {
         $response = $next($request);
 
@@ -30,7 +32,7 @@ class TrackUserActivity
         // Check if path should be excluded
         $excludedPaths = config('user-history.excluded_paths', []);
         $currentPath = $request->path();
-        
+
         foreach ($excludedPaths as $excludedPath) {
             if (fnmatch($excludedPath, $currentPath)) {
                 return $response;
@@ -39,19 +41,19 @@ class TrackUserActivity
 
         // Check tracking mode
         $trackingMode = config('user-history.page_visit_tracking', 'important');
-        
+
         if ($trackingMode === 'important') {
             // Only track important paths
             $importantPaths = config('user-history.important_paths', []);
             $shouldTrack = false;
-            
+
             foreach ($importantPaths as $importantPath) {
                 if (fnmatch($importantPath, $currentPath)) {
                     $shouldTrack = true;
                     break;
                 }
             }
-            
+
             if (!$shouldTrack) {
                 return $response;
             }
@@ -63,7 +65,7 @@ class TrackUserActivity
 
         // Get action from parameter or request method
         $action = $action ?? $this->getActionFromRequest($request);
-        
+
         // Get description from parameter or generate from request
         $description = $description ?? $this->getDescriptionFromRequest($request);
 
@@ -114,7 +116,7 @@ class TrackUserActivity
     /**
      * Get action from request method and route.
      */
-    protected function getActionFromRequest(Request $request): string
+    private function getActionFromRequest(Request $request): string
     {
         $method = $request->method();
         $routeName = $request->route()?->getName();
@@ -149,7 +151,7 @@ class TrackUserActivity
     /**
      * Get description from request.
      */
-    protected function getDescriptionFromRequest(Request $request): string
+    private function getDescriptionFromRequest(Request $request): string
     {
         $method = $request->method();
         $routeName = $request->route()?->getName();
@@ -161,13 +163,13 @@ class TrackUserActivity
         }
 
         // Fallback to path-based description
-        $pathParts = explode('/', trim($path, '/'));
+        $pathParts = explode('/', mb_trim($path, '/'));
         $lastPart = end($pathParts);
-        
+
         if ($lastPart) {
             return ucfirst(str_replace(['-', '_'], ' ', $lastPart));
         }
 
         return ucfirst($method) . ' request';
     }
-} 
+}

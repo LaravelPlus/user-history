@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace LaravelPlus\UserHistory\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class UserActivityResource extends JsonResource
+final class UserActivityResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -15,13 +17,11 @@ class UserActivityResource extends JsonResource
         return [
             'id' => $this->id,
             'user_id' => $this->user_id,
-            'user' => $this->whenLoaded('user', function () {
-                return [
-                    'id' => $this->user->id,
-                    'name' => $this->user->name,
-                    'email' => $this->user->email,
-                ];
-            }),
+            'user' => $this->whenLoaded('user', fn () => [
+                'id' => $this->user->id,
+                'name' => $this->user->name,
+                'email' => $this->user->email,
+            ]),
             'action' => $this->action,
             'description' => $this->description,
             'formatted_description' => $this->formatted_description,
@@ -29,13 +29,11 @@ class UserActivityResource extends JsonResource
             'user_agent' => $this->user_agent,
             'subject_type' => $this->subject_type,
             'subject_id' => $this->subject_id,
-            'subject' => $this->whenLoaded('subject', function () {
-                return [
-                    'id' => $this->subject->id,
-                    'name' => $this->subject->getActivitySubjectName(),
-                    'url' => $this->subject->getActivitySubjectUrl(),
-                ];
-            }),
+            'subject' => $this->whenLoaded('subject', fn () => [
+                'id' => $this->subject->id,
+                'name' => $this->subject->getActivitySubjectName(),
+                'url' => $this->subject->getActivitySubjectUrl(),
+            ]),
             'properties' => $this->properties,
             'metadata' => $this->metadata,
             'activity_icon' => $this->activity_icon,
@@ -47,4 +45,4 @@ class UserActivityResource extends JsonResource
             'created_at_time' => $this->created_at?->format('H:i:s'),
         ];
     }
-} 
+}

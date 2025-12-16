@@ -1,10 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace LaravelPlus\UserHistory\Traits;
 
-use LaravelPlus\UserHistory\Models\UserActivity;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Facades\Auth;
+use LaravelPlus\UserHistory\Models\UserActivity;
 
 trait HasUserActivity
 {
@@ -48,7 +50,7 @@ trait HasUserActivity
     public function recordUpdated(array $changes = [], array $properties = [], array $metadata = []): UserActivity
     {
         $properties = array_merge($properties, ['changes' => $changes]);
-        
+
         return $this->recordActivity('updated', null, $properties, $metadata);
     }
 
@@ -74,7 +76,7 @@ trait HasUserActivity
     protected function getDefaultActivityDescription(string $action): string
     {
         $modelName = class_basename($this);
-        
+
         return match ($action) {
             'created' => "Created {$modelName}",
             'updated' => "Updated {$modelName}",
@@ -125,24 +127,24 @@ trait HasUserActivity
      */
     protected static function bootHasUserActivity(): void
     {
-        static::created(function ($model) {
+        static::created(function ($model): void {
             if (config('user-history.auto_record_events', true)) {
                 $model->recordCreated();
             }
         });
 
-        static::updated(function ($model) {
+        static::updated(function ($model): void {
             if (config('user-history.auto_record_events', true)) {
                 $changes = $model->getChanges();
                 unset($changes['updated_at']); // Don't track timestamp changes
-                
+
                 if (!empty($changes)) {
                     $model->recordUpdated($changes);
                 }
             }
         });
 
-        static::deleted(function ($model) {
+        static::deleted(function ($model): void {
             if (config('user-history.auto_record_events', true)) {
                 $model->recordDeleted();
             }
@@ -150,11 +152,11 @@ trait HasUserActivity
 
         // Only register restored event if the model uses SoftDeletes
         if (in_array(\Illuminate\Database\Eloquent\SoftDeletes::class, class_uses_recursive(static::class))) {
-            static::restored(function ($model) {
+            static::restored(function ($model): void {
                 if (config('user-history.auto_record_events', true)) {
                     $model->recordRestored();
                 }
             });
         }
     }
-} 
+}

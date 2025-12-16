@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 return [
     /*
     |--------------------------------------------------------------------------
@@ -278,4 +280,4 @@ return [
         'settings/*', // Settings pages
         'profile/*', // Profile pages
     ],
-]; 
+];

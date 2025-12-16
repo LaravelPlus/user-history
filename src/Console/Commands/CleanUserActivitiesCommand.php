@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace LaravelPlus\UserHistory\Console\Commands;
 
 use Illuminate\Console\Command;
 use LaravelPlus\UserHistory\Services\UserActivityService;
 
-class CleanUserActivitiesCommand extends Command
+final class CleanUserActivitiesCommand extends Command
 {
     /**
      * The name and signature of the console command.
@@ -37,22 +39,22 @@ class CleanUserActivitiesCommand extends Command
 
         if ($dryRun) {
             $this->warn('DRY RUN MODE - No activities will be deleted');
-            
+
             // Count activities that would be deleted
             $cutoffDate = now()->subDays($daysToKeep);
             $count = \LaravelPlus\UserHistory\Models\UserActivity::where('created_at', '<', $cutoffDate)->count();
-            
+
             $this->info("Would delete {$count} activities older than {$cutoffDate->format('Y-m-d H:i:s')}");
-            
+
             if ($count > 0) {
                 $this->table(
                     ['Date Range', 'Count'],
                     [
-                        ['Older than ' . $cutoffDate->format('Y-m-d'), $count]
+                        ['Older than ' . $cutoffDate->format('Y-m-d'), $count],
                     ]
                 );
             }
-            
+
             return self::SUCCESS;
         }
 
@@ -66,4 +68,4 @@ class CleanUserActivitiesCommand extends Command
 
         return self::SUCCESS;
     }
-} 
+}

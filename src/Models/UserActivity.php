@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace LaravelPlus\UserHistory\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -8,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class UserActivity extends Model
+final class UserActivity extends Model
 {
     use HasFactory, SoftDeletes;
 
@@ -83,11 +85,11 @@ class UserActivity extends Model
     public function scopeForSubject($query, $subjectType, $subjectId = null)
     {
         $query->where('subject_type', $subjectType);
-        
+
         if ($subjectId) {
             $query->where('subject_id', $subjectId);
         }
-        
+
         return $query;
     }
 
@@ -150,4 +152,4 @@ class UserActivity extends Model
             default => 'secondary',
         };
     }
-} 
+}

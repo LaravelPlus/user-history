@@ -1,13 +1,15 @@
 <?php
 
+declare(strict_types=1);
+
 namespace LaravelPlus\UserHistory\Providers;
 
 use Illuminate\Support\ServiceProvider;
-use LaravelPlus\UserHistory\Services\UserActivityService;
 use LaravelPlus\UserHistory\Console\Commands\CleanUserActivitiesCommand;
 use LaravelPlus\UserHistory\Console\Commands\ExportUserActivitiesCommand;
+use LaravelPlus\UserHistory\Services\UserActivityService;
 
-class UserHistoryServiceProvider extends ServiceProvider
+final class UserHistoryServiceProvider extends ServiceProvider
 {
     /**
      * Register services.
@@ -18,9 +20,7 @@ class UserHistoryServiceProvider extends ServiceProvider
             __DIR__ . '/../../config/user-history.php', 'user-history'
         );
 
-        $this->app->singleton(UserActivityService::class, function ($app) {
-            return new UserActivityService();
-        });
+        $this->app->singleton(UserActivityService::class, fn ($app) => new UserActivityService());
 
         $this->app->alias(UserActivityService::class, 'user-activity');
     }
@@ -116,4 +116,4 @@ class UserHistoryServiceProvider extends ServiceProvider
             'user-activity',
         ];
     }
-} 
+}

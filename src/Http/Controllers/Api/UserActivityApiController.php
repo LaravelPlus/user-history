@@ -1,16 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace LaravelPlus\UserHistory\Http\Controllers\Api;
 
-use Illuminate\Http\Request;
-use Illuminate\Routing\Controller;
-use LaravelPlus\UserHistory\Services\UserActivityService;
-use LaravelPlus\UserHistory\Models\UserActivity;
-use LaravelPlus\UserHistory\Http\Resources\UserActivityResource;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Routing\Controller;
+use LaravelPlus\UserHistory\Http\Resources\UserActivityResource;
+use LaravelPlus\UserHistory\Models\UserActivity;
+use LaravelPlus\UserHistory\Services\UserActivityService;
 
-class UserActivityApiController extends Controller
+final class UserActivityApiController extends Controller
 {
     public function __construct(
         protected UserActivityService $activityService
@@ -23,9 +25,9 @@ class UserActivityApiController extends Controller
     {
         $filters = $request->only(['user_id', 'action', 'subject_type', 'subject_id', 'date_from', 'date_to', 'search']);
         $perPage = $request->get('per_page', config('user-history.per_page', 15));
-        
+
         $activities = $this->activityService->getPaginatedActivities($filters, $perPage);
-        
+
         return UserActivityResource::collection($activities);
     }
 
@@ -35,7 +37,7 @@ class UserActivityApiController extends Controller
     public function show(UserActivity $activity): UserActivityResource
     {
         $activity->load(['user', 'subject']);
-        
+
         return new UserActivityResource($activity);
     }
 
@@ -46,9 +48,9 @@ class UserActivityApiController extends Controller
     {
         $filters = array_merge($request->only(['action', 'date_from', 'date_to']), ['user_id' => $user->id]);
         $perPage = $request->get('per_page', config('user-history.per_page', 15));
-        
+
         $activities = $this->activityService->getPaginatedActivities($filters, $perPage);
-        
+
         return UserActivityResource::collection($activities);
     }
 
@@ -59,7 +61,7 @@ class UserActivityApiController extends Controller
     {
         $limit = $request->get('limit', 50);
         $activities = $this->activityService->getModelActivities($modelType, $modelId, $limit);
-        
+
         return UserActivityResource::collection($activities);
     }
 
@@ -70,7 +72,7 @@ class UserActivityApiController extends Controller
     {
         $filters = $request->only(['user_id', 'action', 'date_from', 'date_to']);
         $stats = $this->activityService->getActivityStats($filters);
-        
+
         return response()->json($stats);
     }
 
@@ -81,9 +83,9 @@ class UserActivityApiController extends Controller
     {
         $filters = $request->only(['user_id', 'action', 'date_from', 'date_to']);
         $days = $request->get('days', 30);
-        
+
         $activitiesByDate = $this->activityService->getActivitiesByDate($filters, $days);
-        
+
         return response()->json($activitiesByDate);
     }
 
@@ -93,12 +95,12 @@ class UserActivityApiController extends Controller
     public function activitiesByAction(Request $request): JsonResponse
     {
         $filters = $request->only(['user_id', 'date_from', 'date_to']);
-        
+
         $activitiesByAction = UserActivity::selectRaw('action, COUNT(*) as count')
-            ->when(isset($filters['user_id']), function ($query) use ($filters) {
+            ->when(isset($filters['user_id']), function ($query) use ($filters): void {
                 $query->forUser($filters['user_id']);
             })
-            ->when(isset($filters['date_from']) || isset($filters['date_to']), function ($query) use ($filters) {
+            ->when(isset($filters['date_from']) || isset($filters['date_to']), function ($query) use ($filters): void {
                 $dateFrom = $filters['date_from'] ?? now()->subDays(30);
                 $dateTo = $filters['date_to'] ?? now();
                 $query->dateRange($dateFrom, $dateTo);
@@ -106,7 +108,7 @@ class UserActivityApiController extends Controller
             ->groupBy('action')
             ->orderBy('count', 'desc')
             ->get();
-        
+
         return response()->json($activitiesByAction);
     }
 
@@ -117,13 +119,13 @@ class UserActivityApiController extends Controller
     {
         $filters = $request->only(['action', 'date_from', 'date_to']);
         $limit = $request->get('limit', 10);
-        
+
         $activitiesByUser = UserActivity::selectRaw('user_id, COUNT(*) as count')
             ->with('user:id,name,email')
-            ->when(isset($filters['action']), function ($query) use ($filters) {
+            ->when(isset($filters['action']), function ($query) use ($filters): void {
                 $query->action($filters['action']);
             })
-            ->when(isset($filters['date_from']) || isset($filters['date_to']), function ($query) use ($filters) {
+            ->when(isset($filters['date_from']) || isset($filters['date_to']), function ($query) use ($filters): void {
                 $dateFrom = $filters['date_from'] ?? now()->subDays(30);
                 $dateTo = $filters['date_to'] ?? now();
                 $query->dateRange($dateFrom, $dateTo);
@@ -132,7 +134,7 @@ class UserActivityApiController extends Controller
             ->orderBy('count', 'desc')
             ->limit($limit)
             ->get();
-        
+
         return response()->json($activitiesByUser);
     }
 
@@ -143,7 +145,7 @@ class UserActivityApiController extends Controller
     {
         $filters = $request->only(['user_id', 'action', 'subject_type', 'subject_id', 'date_from', 'date_to']);
         $filepath = $this->activityService->exportToCsv($filters);
-        
+
         return response()->download($filepath)->deleteFileAfterSend();
     }
 
@@ -154,9 +156,9 @@ class UserActivityApiController extends Controller
     {
         $filters = $request->only(['user_id', 'action', 'subject_type', 'subject_id', 'date_from', 'date_to']);
         $limit = $request->get('limit', config('user-history.export.max_records', 10000));
-        
+
         $activities = $this->activityService->getActivities($filters)->limit($limit)->get();
-        
+
         return response()->json(UserActivityResource::collection($activities));
     }
 
@@ -168,9 +170,9 @@ class UserActivityApiController extends Controller
         $search = $request->get('q');
         $filters = array_merge($request->only(['user_id', 'action', 'date_from', 'date_to']), ['search' => $search]);
         $perPage = $request->get('per_page', config('user-history.per_page', 15));
-        
+
         $activities = $this->activityService->getPaginatedActivities($filters, $perPage);
-        
+
         return UserActivityResource::collection($activities);
     }
 
@@ -181,9 +183,9 @@ class UserActivityApiController extends Controller
     {
         $filters = $request->all();
         $perPage = $request->get('per_page', config('user-history.per_page', 15));
-        
+
         $activities = $this->activityService->getPaginatedActivities($filters, $perPage);
-        
+
         return UserActivityResource::collection($activities);
     }
 
@@ -194,7 +196,7 @@ class UserActivityApiController extends Controller
     {
         $stats = $this->activityService->getActivityStats();
         $recentActivities = $this->activityService->getDashboardActivities();
-        
+
         return response()->json([
             'stats' => $stats,
             'recent_activities' => UserActivityResource::collection($recentActivities),
@@ -208,7 +210,7 @@ class UserActivityApiController extends Controller
     {
         $limit = $request->get('limit', 10);
         $activities = $this->activityService->getDashboardActivities($limit);
-        
+
         return UserActivityResource::collection($activities);
     }
 
@@ -219,17 +221,17 @@ class UserActivityApiController extends Controller
     {
         $filters = $request->only(['user_id', 'action', 'date_from', 'date_to']);
         $stats = $this->activityService->getActivityStats($filters);
-        
+
         // Get top users
         $topUsers = UserActivity::selectRaw('user_id, COUNT(*) as count')
             ->with('user:id,name,email')
-            ->when(isset($filters['user_id']), function ($query) use ($filters) {
+            ->when(isset($filters['user_id']), function ($query) use ($filters): void {
                 $query->forUser($filters['user_id']);
             })
-            ->when(isset($filters['action']), function ($query) use ($filters) {
+            ->when(isset($filters['action']), function ($query) use ($filters): void {
                 $query->action($filters['action']);
             })
-            ->when(isset($filters['date_from']) || isset($filters['date_to']), function ($query) use ($filters) {
+            ->when(isset($filters['date_from']) || isset($filters['date_to']), function ($query) use ($filters): void {
                 $dateFrom = $filters['date_from'] ?? now()->subDays(30);
                 $dateTo = $filters['date_to'] ?? now();
                 $query->dateRange($dateFrom, $dateTo);
@@ -238,7 +240,7 @@ class UserActivityApiController extends Controller
             ->orderBy('count', 'desc')
             ->limit(5)
             ->get();
-        
+
         return response()->json([
             'stats' => $stats,
             'top_users' => $topUsers,
@@ -251,34 +253,32 @@ class UserActivityApiController extends Controller
     public function quickSearch(Request $request): JsonResponse
     {
         $query = $request->get('q');
-        
-        if (strlen($query) < 2) {
+
+        if (mb_strlen($query) < 2) {
             return response()->json(['data' => []]);
         }
 
         $activities = UserActivity::with('user:id,name')
-            ->where(function ($q) use ($query) {
+            ->where(function ($q) use ($query): void {
                 $q->where('description', 'like', "%{$query}%")
-                  ->orWhere('action', 'like', "%{$query}%")
-                  ->orWhereHas('user', function ($userQuery) use ($query) {
-                      $userQuery->where('name', 'like', "%{$query}%")
-                               ->orWhere('email', 'like', "%{$query}%");
-                  });
+                    ->orWhere('action', 'like', "%{$query}%")
+                    ->orWhereHas('user', function ($userQuery) use ($query): void {
+                        $userQuery->where('name', 'like', "%{$query}%")
+                            ->orWhere('email', 'like', "%{$query}%");
+                    });
             })
             ->orderBy('created_at', 'desc')
             ->limit(10)
             ->get()
-            ->map(function ($activity) {
-                return [
-                    'id' => $activity->id,
-                    'user_id' => $activity->user_id,
-                    'user_name' => $activity->user ? $activity->user->name : 'Unknown User',
-                    'action' => $activity->action,
-                    'description' => $activity->description,
-                    'created_at' => $activity->created_at
-                ];
-            });
+            ->map(fn ($activity) => [
+                'id' => $activity->id,
+                'user_id' => $activity->user_id,
+                'user_name' => $activity->user ? $activity->user->name : 'Unknown User',
+                'action' => $activity->action,
+                'description' => $activity->description,
+                'created_at' => $activity->created_at,
+            ]);
 
         return response()->json(['data' => $activities]);
     }
-} 
+}

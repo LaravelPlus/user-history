@@ -1,14 +1,16 @@
 <?php
 
+declare(strict_types=1);
+
 namespace LaravelPlus\UserHistory\Services;
 
-use LaravelPlus\UserHistory\Models\UserActivity;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Collection;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
+use LaravelPlus\UserHistory\Models\UserActivity;
 
-class UserActivityService
+final class UserActivityService
 {
     /**
      * Get activities with optional filters.
@@ -75,7 +77,7 @@ class UserActivityService
     /**
      * Get activities for a specific model.
      */
-    public function getModelActivities(string $modelClass, int $modelId = null, int $limit = 50): Collection
+    public function getModelActivities(string $modelClass, ?int $modelId = null, int $limit = 50): Collection
     {
         $query = UserActivity::with(['user', 'subject'])
             ->forSubject($modelClass, $modelId)
@@ -100,7 +102,7 @@ class UserActivityService
         $todayActivities = $query->whereDate('created_at', Carbon::today())->count();
         $thisWeekActivities = $query->whereBetween('created_at', [
             Carbon::now()->startOfWeek(),
-            Carbon::now()->endOfWeek()
+            Carbon::now()->endOfWeek(),
         ])->count();
 
         // Get most common actions
@@ -128,10 +130,10 @@ class UserActivityService
         $startDate = Carbon::now()->subDays($days);
 
         return UserActivity::selectRaw('DATE(created_at) as date, COUNT(*) as count')
-            ->when(isset($filters['user_id']), function ($query) use ($filters) {
+            ->when(isset($filters['user_id']), function ($query) use ($filters): void {
                 $query->forUser($filters['user_id']);
             })
-            ->when(isset($filters['action']), function ($query) use ($filters) {
+            ->when(isset($filters['action']), function ($query) use ($filters): void {
                 $query->action($filters['action']);
             })
             ->where('created_at', '>=', $startDate)
@@ -146,7 +148,7 @@ class UserActivityService
     public function cleanOldActivities(int $daysToKeep = 365): int
     {
         $cutoffDate = Carbon::now()->subDays($daysToKeep);
-        
+
         return UserActivity::where('created_at', '<', $cutoffDate)->delete();
     }
 
@@ -156,17 +158,17 @@ class UserActivityService
     public function exportToCsv(array $filters = []): string
     {
         $activities = $this->getActivities($filters)->get();
-        
+
         $filename = 'user_activities_' . Carbon::now()->format('Y-m-d_H-i-s') . '.csv';
         $filepath = storage_path('app/exports/' . $filename);
-        
+
         // Ensure directory exists
         if (!file_exists(dirname($filepath))) {
             mkdir(dirname($filepath), 0755, true);
         }
-        
+
         $handle = fopen($filepath, 'w');
-        
+
         // Write headers
         fputcsv($handle, [
             'ID',
@@ -179,7 +181,7 @@ class UserActivityService
             'User Agent',
             'Created At',
         ]);
-        
+
         // Write data
         foreach ($activities as $activity) {
             fputcsv($handle, [
@@ -194,9 +196,9 @@ class UserActivityService
                 $activity->created_at->format('Y-m-d H:i:s'),
             ]);
         }
-        
+
         fclose($handle);
-        
+
         return $filepath;
     }
 
@@ -217,7 +219,7 @@ class UserActivityService
     public function recordDeferredActivity(array $data): void
     {
         // Use dispatch to run after response is sent
-        dispatch(function () use ($data) {
+        dispatch(function () use ($data): void {
             UserActivity::create($data);
         })->afterResponse();
     }
@@ -228,7 +230,7 @@ class UserActivityService
     public function recordDeferredSimpleActivity(string $action, string $description, ?int $userId = null): void
     {
         $userId = $userId ?? auth()->id();
-        
+
         if (!$userId) {
             return;
         }
@@ -250,4 +252,4 @@ class UserActivityService
             ],
         ]);
     }
-} 
+}

@@ -96,36 +96,6 @@ final class UserActivityController extends Controller
     }
 
     /**
-     * Display activities for a specific user.
-     */
-    public function userActivities(Request $request, $user): View
-    {
-        $activities = $this->activityService->getPaginatedActivities(['user_id' => $user->id]);
-
-        return view('user-history::activities.user', compact('activities', 'user'));
-    }
-
-    /**
-     * Display activities for a specific model.
-     */
-    public function modelActivities(Request $request, string $modelType, $modelId = null): View
-    {
-        $activities = $this->activityService->getModelActivities($modelType, $modelId);
-
-        return view('user-history::activities.model', compact('activities', 'modelType', 'modelId'));
-    }
-
-    /**
-     * Display a specific activity.
-     */
-    public function show(UserActivity $activity): View
-    {
-        $activity->load(['user', 'subject']);
-
-        return view('user-history::activities.show', compact('activity'));
-    }
-
-    /**
      * Display the statistics page.
      */
     public function stats(Request $request): View
@@ -173,17 +143,6 @@ final class UserActivityController extends Controller
             ]);
 
         return view('user-history::stats', compact('stats', 'activitiesByDate', 'activitiesByAction', 'topUsers', 'filters'));
-    }
-
-    /**
-     * Display reports page.
-     */
-    public function reports(Request $request): View
-    {
-        $filters = $request->only(['user_id', 'action', 'date_from', 'date_to']);
-        $stats = $this->activityService->getActivityStats($filters);
-
-        return view('user-history::reports', compact('stats', 'filters'));
     }
 
     /**
@@ -236,7 +195,8 @@ final class UserActivityController extends Controller
      */
     public function cleanup(Request $request): JsonResponse
     {
-        $daysToKeep = $request->get('days_to_keep', config('user-history.retention_days', 365));
+        $validated = $request->validate(['days_to_keep' => 'sometimes|integer|min:1']);
+        $daysToKeep = (int) ($validated['days_to_keep'] ?? config('user-history.retention_days', 365));
         $deletedCount = $this->activityService->cleanOldActivities($daysToKeep);
 
         return response()->json([
@@ -413,33 +373,31 @@ final class UserActivityController extends Controller
      */
     public function users(Request $request): View
     {
-        $users = \App\Models\User::select('id', 'name', 'email', 'created_at')
+        $userModel = config('auth.providers.users.model');
+
+        // One grouped query for every user's last-7-days counts (was one query per user)
+        $weekly = UserActivity::selectRaw('user_id, DATE(created_at) as date, COUNT(*) as count')
+            ->where('created_at', '>=', now()->subDays(7))
+            ->groupBy('user_id', 'date')
+            ->orderBy('date')
+            ->get()
+            ->groupBy('user_id');
+
+        $users = $userModel::select('id', 'name', 'email', 'created_at')
             ->withCount('activities')
             ->withMax('activities', 'created_at')
             ->get()
-            ->map(function ($user) {
-                // Get weekly activity data
-                $weeklyActivity = UserActivity::selectRaw('DATE(created_at) as date, COUNT(*) as count')
-                    ->where('user_id', $user->id)
-                    ->where('created_at', '>=', now()->subDays(7))
-                    ->groupBy('date')
-                    ->orderBy('date')
-                    ->get()
-                    ->map(fn ($day) => [
-                        'date' => $day->date,
-                        'count' => $day->count,
-                    ]);
-
-                return [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'created_at' => $user->created_at,
-                    'activity_count' => $user->activities_count,
-                    'last_activity' => $user->activities_max_created_at,
-                    'weekly_activity' => $weeklyActivity,
-                ];
-            });
+            ->map(fn ($user) => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'created_at' => $user->created_at,
+                'activity_count' => $user->activities_count,
+                'last_activity' => $user->activities_max_created_at,
+                'weekly_activity' => ($weekly[$user->id] ?? collect())
+                    ->map(fn ($day) => ['date' => $day->date, 'count' => $day->count])
+                    ->values(),
+            ]);
 
         return view('user-history::users.index', compact('users'));
     }
@@ -449,7 +407,7 @@ final class UserActivityController extends Controller
      */
     public function userProfile(Request $request, $userId): View
     {
-        $user = \App\Models\User::findOrFail($userId);
+        $user = config('auth.providers.users.model')::findOrFail($userId);
 
         // Get user stats
         $userStats = [

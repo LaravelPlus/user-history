@@ -17,8 +17,8 @@ A comprehensive Laravel package for tracking user activities and history with ad
 
 ## Requirements
 
-- PHP 8.1 or higher
-- Laravel 10.x, 11.x, or 12.x
+- PHP 8.4 or higher
+- Laravel 12.x or 13.x
 - spatie/laravel-permission 5.x or 6.x
 
 ## Installation
@@ -179,6 +179,14 @@ $recentActivities = UserActivity::with(['user', 'subject'])
     ->orderBy('created_at', 'desc')
     ->limit(10)
     ->get();
+```
+
+## Authorization
+
+All web and API routes are denied (404) unless your app defines the `viewUserHistory` gate:
+
+```php
+Gate::define('viewUserHistory', fn ($user) => $user->is_admin);
 ```
 
 ## Routes

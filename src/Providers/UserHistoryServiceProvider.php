@@ -23,6 +23,9 @@ final class UserHistoryServiceProvider extends ServiceProvider
         $this->app->singleton(UserActivityService::class, fn ($app) => new UserActivityService());
 
         $this->app->alias(UserActivityService::class, 'user-activity');
+
+        // terminate() must run on the same instance that handle() filled (deferred tracking)
+        $this->app->singleton(\LaravelPlus\UserHistory\Middleware\TrackUserActivity::class);
     }
 
     /**
@@ -100,6 +103,7 @@ final class UserHistoryServiceProvider extends ServiceProvider
      */
     protected function registerMiddleware(): void
     {
+        $this->app['router']->aliasMiddleware('user-history.authorize', \LaravelPlus\UserHistory\Middleware\AuthorizeUserHistory::class);
         $this->app['router']->aliasMiddleware('track.user.activity', \LaravelPlus\UserHistory\Middleware\TrackUserActivity::class);
 
         // For Laravel 11, we need to register middleware in bootstrap/app.php

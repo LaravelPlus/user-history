@@ -7,7 +7,7 @@ use LaravelPlus\UserHistory\Http\Controllers\Api\UserActivityApiController;
 
 Route::group([
     'prefix' => config('user-history.api.prefix'),
-    'middleware' => config('user-history.api.middleware'),
+    'middleware' => [...config('user-history.api.middleware', []), 'user-history.authorize'],
     'as' => 'api.user-history.',
 ], function (): void {
 
